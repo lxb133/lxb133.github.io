@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html rem="750">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link rel="stylesheet" href="css/u-reset.min.css">
+    <link rel="stylesheet" href="./css/common.css">
+    <link rel="stylesheet" href="./css/index.css">
+</head>
+<body>
+    <!-- 1首屏 开始 -->
+    <div class="container index active">
+        <img src="./images/avatar.jpg" class="avatar">
+        <div class="username">Join. AI Box</div>
+
+        <div class="login-btn button">人脸登录</div>
+        <div class="register-btn button">人脸注册</div>
+    </div>
+    <!-- 首屏 结束 -->
+    <!-- 2注册用户名 开始 -->
+    <div class="container register-user ">
+        <div class="header">
+            <div class="circle1"></div>
+            <div class="circle2"></div>
+            <div class="circle3"></div>
+            <div class="circle4"></div>
+            <div class="circle5"></div>
+        </div>
+        <div class="desc1">请通过人脸识别验证您的身份</div>
+        <div class="desc2">请按照以下步骤完成脸部验证</div>
+
+        <input type="text" class="input-user">
+        <div class="start-btn button">准备就绪</div>
+    </div>
+    <!-- 注册用户名 结束 -->
+    <!-- 3注册提示 开始 -->
+    <div class="container register-tips ">
+        <img src="./images/yinpin.png" alt="" class="tips-img">
+        <div class="tips">请将音量调整到适中<br>
+        并跟随语音提示以及视频完成动作</div>
+        <div class="kown-btn button">准备就绪</div>
+    </div>
+    <!-- 注册提示 结束 -->
+    <!-- 4 注册 开始 -->
+    <div class="container register">
+        <video id="video" class="video"></video>
+        <canvas id="canvas" class="canvas" width="202" height="256"></canvas>
+        <div class="text">正脸对准屏幕</div>
+        <div class="register-btn button">人脸注册</div>
+    </div>
+    <!-- 注册 结束 -->
+    <!-- 5 登录 开始 -->
+    <div class="container login">
+        <video id="video2" class="video"></video>
+        <canvas id="canvas2" class="canvas" width="202" height="256"></canvas>
+        <div class="text">正脸对准屏幕</div>
+        <div class="again-btn button">再次重试</div>
+    </div>
+    <!-- 5 登录 结束 -->
+    <!-- 6 登录成功 开始 -->
+    <div class="container success">
+        <img src="./images/ok.png" alt="">
+        <div class="text">欢迎登录</div>
+    </div>
+    <!-- 6 登录成功 结束 -->
+    <script>
+        // 第一屏按钮
+        var pages = {
+            index: document.querySelector(".index"),
+            registerUser:document.querySelector(".register-user"),
+            registerTips:document.querySelector(".register-tips"),
+            register: document.querySelector(".register"),
+            login: document.querySelector(".login"),
+            success:document.querySelector(".success")
+        }
+        var username = "";
+        var loginBtn = document.querySelector(".login-btn");
+        var indexRegisterBtn = document.querySelector(".index .register-btn");
+        loginBtn.onclick = function(){
+            changePage("login", login)
+        }
+        indexRegisterBtn.onclick = function () {
+            changePage('registerUser');
+            speak("请按照以下步骤完成脸部验证");
+        }
+        // 第二屏 输入用户名
+        var startBtn = document.querySelector('.start-btn');
+        var inputUser = document.querySelector('.input-user');
+        startBtn.onclick = function(){
+            username = inputUser.value;
+            localStorage.setItem("username",username)
+            if(!username){
+                alert("请输入用户名");
+                return false;
+            }
+            speak("请将音量调整到适中并跟随语音提示以及视频完成动作");
+            changePage('registerTips');
+        }
+        // 第三屏 注册人脸 
+        var kownBtn = document.querySelector(".kown-btn");
+        kownBtn.onclick = function(){
+            speak("正脸对准摄像头")
+            changePage('register');
+            navigator.mediaDevices.getUserMedia(constraints).then(MediaStream => {
+                video.srcObject = MediaStream;
+                video.play()
+            })
+        }
+        // 第四屏 
+        var video = document.querySelector("#video");
+        var canvas = document.querySelector("#canvas");
+        var registerRegisterBtn = document.querySelector(".register .register-btn");
+        var constraints = {
+                video: { width: 202, height: 256, facingMode: "user" },
+                audio: false
+            };
+        
+        registerRegisterBtn.onclick = function(){
+            
+            var cobj = canvas.getContext("2d")
+            cobj.drawImage(video, 0, 0)
+            var data = canvas.toDataURL("image/png", 0.7).slice(22);
+            fetch("http://47.96.74.79:9999/detect",{
+                method: "post",
+                headers: {
+                    "content-type": "application/json"
+                },
+                body: JSON.stringify({ avatar: data})
+            })
+            .then(res=>{
+                return res.json()
+            })
+            .then((res) => {
+                console.log(res)
+                if (res.code === 200) {
+                    fetch("http://47.96.74.79:9999/save", {
+                        method: "post",
+                        headers:  {
+                            "content-type": "application/json"
+                        },
+                        body: JSON.stringify({ avatar: data, name: username })
+                    })
+                    .then(function (e) {
+                        return e.json()
+                    })
+                    .then((res) => {
+                        if (res.code === 200) {
+                            speak("人脸注册成功")
+                            changePage("index")
+                        } else {
+                            var str = "识别失败请重试！";
+                            speak(str)
+                        }
+                    })
+                } else {
+                    var str = "识别失败请重试！";
+                    speak(str);
+                }
+            })
+            
+        }
+        // 第五屏
+        var video2 = document.querySelector("#video2");
+        var canvas2 = document.querySelector("#canvas2");
+        var againBtn = document.querySelector(".again-btn");
+        againBtn.onclick = function(){
+            login()
+        }
+        function login(){
+            var constraints = {
+                video: { width: 202, height: 256, facingMode: "user" },
+                audio: false
+            };
+            navigator.mediaDevices.getUserMedia(constraints).then(MediaStream => {
+                video2.srcObject = MediaStream;
+                video2.play()
+            })
+            var cobj = canvas2.getContext("2d")
+            cobj.drawImage(video2, 0, 0)
+            var data = canvas2.toDataURL("image/png", 0.7).slice(22);
+            setTimeout(() => {
+                fetch("http://47.96.74.79:9999/check", {
+                    method: "post",
+                    headers: {
+                        "content-type": "application/json"
+                    },
+                    body: JSON.stringify({ avatar: data,name: localStorage.getItem("username") })
+                })
+                    .then(res => {
+                        return res.json()
+                    })
+                    .then((res) => {
+                        console.log(res)
+                        if (res.error_code === 0 && res.result.user_list[0].score > 80) {
+                            let name = res.result.user_list[0].user_info;
+                            let str = "欢迎" + name + "登录------------------ 优逸客提醒您道路千万条----------- 学习第一条 --------------- 上课不努力 ----------------- 工作两行泪";
+                            
+                            changePage('success',function(){
+                                speak(str)
+                            })
+                        } else {
+                            let str = "识别失败，请重试";
+                            speak(str);
+                        }
+                    })
+            }, 2000);
+            
+        }
+        // 公共函数
+        function changePage(name,callback=function(){}){
+            for(var i in pages){
+                pages[i].classList.remove("active");
+            }
+            pages[name].classList.add("active");
+            callback();
+        }
+        const msg = new SpeechSynthesisUtterance();
+        function speak(text){
+            msg.text = text;
+            window.speechSynthesis.speak(msg);
+        }
+    </script>
+</body>
+</html>
