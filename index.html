@@ -194,7 +194,7 @@
                         console.log(res)
                         if (res.error_code === 0 && res.result.user_list[0].score > 80) {
                             let name = res.result.user_list[0].user_info;
-                            let str = "欢迎" + name + "登录------------------ 优逸客提醒您道路千万条----------- 学习第一条 --------------- 上课不努力 ----------------- 工作两行泪";
+                            let str = "欢迎" + name + "登录------------------ 道路千万条----------- 学习第一条 --------------- 上课不努力 ----------------- 工作两行泪";
                             
                             changePage('success',function(){
                                 speak(str)
